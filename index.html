@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>Kalkulačka nákladov na cestu</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.png" type="image/png">
+  <meta name="theme-color" content="#0b1220">
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("sw.js");
+    }
+  </script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+           background:#0b1220; color:#e5e7eb; margin:0; padding:16px; }
+    h1 { font-size:1.4rem; margin-bottom:16px; }
+    h2 { font-size:1.1rem; margin:14px 0 10px; }
+    .box { background:#101827; border-radius:14px; padding:16px; margin-bottom:20px; }
+    label { display:block; margin:8px 0 4px; color:#9ca3af; font-size:.9rem; }
+    input { width:100%; padding:12px; border-radius:10px; border:1px solid #1f2937;
+            background:#0b1220; color:#fff; font-size:1rem; margin-bottom:8px; }
+    button { width:100%; padding:12px; border:0; border-radius:10px;
+             background:#22c55e; color:#fff; font-weight:700; font-size:1rem; margin-top:6px; }
+    button:active { transform:translateY(1px); }
+    .res { margin-top:12px; border-top:1px solid #1f2937; padding-top:12px; }
+    .row { display:flex; justify-content:space-between; margin:4px 0; }
+    .k { color:#9ca3af; }
+    .v { font-weight:bold; }
+    table { width:100%; border-collapse:collapse; margin-top:12px; font-size:.9rem; }
+    th, td { padding:6px; border-bottom:1px solid #1f2937; text-align:left; }
+    th { color:#9ca3af; }
+    .total { font-weight:bold; }
+  </style>
+</head>
+<body>
+  <h1>⛽ Kalkulačka nákladov na cestu</h1>
+
+  <!-- Jednoduchý výpočet -->
+  <div class="box">
+    <h2>Jednoduchý výpočet</h2>
+    <label for="km">Vzdialenosť (km)</label>
+    <input id="km" type="text" inputmode="decimal" placeholder="napr. 42">
+    <label for="avg">Priemerná spotreba (l/100 km)</label>
+    <input id="avg" type="text" inputmode="decimal" placeholder="napr. 6,5">
+    <label for="price">Cena benzínu (€ / liter)</label>
+    <input id="price" type="text" inputmode="decimal" placeholder="napr. 1,70">
+    <button onclick="calcSimple()">Vypočítať cenu</button>
+    <div id="err" style="color:#ef4444; margin-top:8px;"></div>
+    <div id="out" class="res" style="display:none">
+      <div class="row"><span class="k">Vzdialenosť</span><span class="v" id="o_dist">– km</span></div>
+      <div class="row"><span class="k">Odhadované litre</span><span class="v" id="o_liters">– l</span></div>
+      <div class="row"><span class="k">Cena celej cesty</span><span class="v" id="o_cost">— €</span></div>
+      <div class="row"><span class="k">Cena / 1 km</span><span class="v" id="o_perkm">— €/km</span></div>
+      <div class="row"><span class="k">Cena / 100 km</span><span class="v" id="o_per100">— €/100 km</span></div>
+    </div>
+  </div>
+
+  <!-- Viac úsekov -->
+  <div class="box">
+    <h2>Rozdelená trasa podľa krajín</h2>
+    <label for="avg2">Priemerná spotreba (l/100 km)</label>
+    <input id="avg2" type="text" inputmode="decimal" placeholder="napr. 6,5">
+    <button onclick="addSegment()">+ Pridať úsek</button>
+    <table id="segments">
+      <thead>
+        <tr><th>Úsek</th><th>Km</th><th>Cena €/l</th><th>Litrov</th><th>Cena</th><th></th></tr>
+      </thead>
+      <tbody></tbody>
+      <tfoot>
+        <tr class="total"><td>Spolu</td><td id="tKm">0</td><td></td><td id="tLiters">0</td><td id="tCost">0 €</td><td></td></tr>
+      </tfoot>
+    </table>
+  </div>
+
+<script>
+function fmt(n,d=2){return Number(n).toLocaleString('sk-SK',{minimumFractionDigits:d,maximumFractionDigits:d});}
+function parseVal(v){return parseFloat((v||"").replace(",","."));}
+
+// Jednoduchý výpočet
+function calcSimple(){
+  document.getElementById("err").textContent="";
+  const km=parseVal(document.getElementById("km").value);
+  const avg=parseVal(document.getElementById("avg").value);
+  const price=parseVal(document.getElementById("price").value);
+  if(!(km>0)) return document.getElementById("err").textContent="Zadaj vzdialenosť";
+  if(!(avg>0)) return document.getElementById("err").textContent="Zadaj spotrebu";
+  if(!(price>0)) return document.getElementById("err").textContent="Zadaj cenu";
+  const liters=(avg/100)*km, cost=liters*price, perKm=cost/km, per100=perKm*100;
+  document.getElementById("o_dist").textContent=fmt(km,1)+" km";
+  document.getElementById("o_liters").textContent=fmt(liters,2)+" l";
+  document.getElementById("o_cost").textContent=fmt(cost,2)+" €";
+  document.getElementById("o_perkm").textContent=fmt(perKm,3)+" €/km";
+  document.getElementById("o_per100").textContent=fmt(per100,2)+" €/100 km";
+  document.getElementById("out").style.display="block";
+}
+
+// Úseky
+function addSegment(name="", km="", price="") {
+  const tbody=document.querySelector("#segments tbody");
+  const tr=document.createElement("tr");
+  tr.innerHTML=`
+    <td><input value="${name}" placeholder="Slovensko"></td>
+    <td><input value="${km}" placeholder="120"></td>
+    <td><input value="${price}" placeholder="1,42"></td>
+    <td class="liters">–</td>
+    <td class="cost">–</td>
+    <td><button onclick="this.closest('tr').remove(); recalc()">✖</button></td>
+  `;
+  tbody.appendChild(tr);
+  tr.querySelectorAll("input").forEach(inp=>inp.addEventListener("input", recalc));
+  recalc();
+}
+function recalc(){
+  const avg=parseVal(document.getElementById("avg2").value);
+  let totalKm=0, totalLiters=0, totalCost=0;
+  document.querySelectorAll("#segments tbody tr").forEach(tr=>{
+    const tds=tr.querySelectorAll("td");
+    const km=parseVal(tds[1].querySelector("input").value);
+    const price=parseVal(tds[2].querySelector("input").value);
+    let liters="–", cost="–";
+    if(avg>0 && km>0){
+      const l=(avg/100)*km; liters=fmt(l,2)+" l"; totalLiters+=l; totalKm+=km;
+      if(price>0){ const c=l*price; cost=fmt(c,2)+" €"; totalCost+=c; }
+    }
+    tds[3].textContent=liters; tds[4].textContent=cost;
+  });
+  document.getElementById("tKm").textContent=fmt(totalKm,1);
+  document.getElementById("tLiters").textContent=fmt(totalLiters,2);
+  document.getElementById("tCost").textContent=fmt(totalCost,2)+" €";
+}
+</script>
+</body>
+</html>
