@@ -1,39 +1,59 @@
 <!DOCTYPE html>
 <html lang="sk">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <title>Kalkulačka nákladov na cestu</title>
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" href="icon.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="icon.png?v=11">
 
-  <meta name="theme-color" content="#0b1220">
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.png" type="image/png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="icon.png?v=11" />
+  <meta name="theme-color" content="#0b1220" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
   <script>
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("sw.js");
+      window.addEventListener("load", () => navigator.serviceWorker.register("sw.js"));
     }
   </script>
+
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-           background:#0b1220; color:#e5e7eb; margin:0; padding:16px; }
-    h1 { font-size:1.5rem; margin-bottom:16px; text-align:center; }
-    h2 { font-size:1.2rem; margin:14px 0 10px; }
-    .box { background:#101827; border-radius:14px; padding:16px; margin-bottom:20px; }
-    label { display:block; margin:6px 0 4px; color:#9ca3af; font-size:.9rem; }
-    input { width:100%; padding:12px; border-radius:10px; border:1px solid #1f2937;
-            background:#0b1220; color:#fff; font-size:1rem; margin-bottom:10px; }
-    button { padding:12px; border:0; border-radius:10px; background:#22c55e;
-             color:#fff; font-weight:700; font-size:1rem; margin-top:6px; width:100%; }
-    button:active { transform:translateY(1px); }
-    .res { margin-top:12px; border-top:1px solid #1f2937; padding-top:12px; }
-    .row { display:flex; justify-content:space-between; margin:4px 0; }
-    .k { color:#9ca3af; }
-    .v { font-weight:bold; }
-    .segment { background:#0b1220; border:1px solid #1f2937; border-radius:12px; padding:12px; margin-bottom:12px; }
-    .segment h3 { margin-top:0; margin-bottom:8px; font-size:1rem; }
-    .removeBtn { background:#ef4444; }
-    .summary { font-weight:bold; font-size:1.1rem; margin-top:10px; }
+    :root { --bg:#0b1220; --card:#101827; --line:#1f2937; --text:#e5e7eb; --muted:#9ca3af; --accent:#22c55e; --danger:#ef4444; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg); color: var(--text); margin: 0; padding: 16px;
+    }
+    h1 { font-size: 1.5rem; margin: 0 0 16px; text-align: center; }
+    h2 { font-size: 1.2rem; margin: 14px 0 10px; }
+    .box {
+      background: var(--card); border: 1px solid var(--line);
+      border-radius: 14px; padding: 16px; margin-bottom: 20px;
+    }
+    label { display: block; margin: 6px 0 4px; color: var(--muted); font-size: .92rem; }
+    input {
+      width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--line);
+      background: #0b1220; color: var(--text); font-size: 1rem; margin-bottom: 10px;
+    }
+    button {
+      padding: 12px; border: 0; border-radius: 10px; background: var(--accent);
+      color: #fff; font-weight: 700; font-size: 1rem; width: 100%;
+    }
+    button:active { transform: translateY(1px); }
+    .btn-danger { background: var(--danger); }
+    .res { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+    .row { display: flex; justify-content: space-between; gap: 8px; margin: 6px 0; }
+    .k { color: var(--muted); }
+    .v { font-weight: 800; }
+    .segment {
+      background: #0b1220; border: 1px solid var(--line); border-radius: 12px;
+      padding: 12px; margin-bottom: 12px;
+    }
+    .segment h3 { margin: 0 0 8px; font-size: 1rem; }
+    .summary { font-weight: 700; font-size: 1.05rem; margin-top: 10px; }
+    .error { color: var(--danger); margin-top: 8px; min-height: 1.2em; }
   </style>
 </head>
 <body>
@@ -42,96 +62,148 @@
   <!-- Jednoduchý výpočet -->
   <div class="box">
     <h2>Jednoduchý výpočet</h2>
+
     <label for="km">Vzdialenosť (km)</label>
-    <input id="km" type="text" inputmode="decimal" placeholder="napr. 42">
+    <input id="km" type="text" inputmode="decimal" placeholder="napr. 42" />
+
     <label for="avg">Priemerná spotreba (l/100 km)</label>
-    <input id="avg" type="text" inputmode="decimal" placeholder="napr. 6,5">
+    <input id="avg" type="text" inputmode="decimal" placeholder="napr. 6,5" />
+
     <label for="price">Cena benzínu (€ / liter)</label>
-    <input id="price" type="text" inputmode="decimal" placeholder="napr. 1,70">
-    <button onclick="calcSimple()">Vypočítať cenu</button>
-    <div id="err" style="color:#ef4444; margin-top:8px;"></div>
+    <input id="price" type="text" inputmode="decimal" placeholder="napr. 1,70" />
+
+    <button id="calcSimpleBtn">Vypočítať cenu</button>
+    <div id="err" class="error"></div>
+
     <div id="out" class="res" style="display:none">
       <div class="row"><span class="k">Vzdialenosť</span><span class="v" id="o_dist">– km</span></div>
       <div class="row"><span class="k">Odhadované litre</span><span class="v" id="o_liters">– l</span></div>
       <div class="row"><span class="k">Cena celej cesty</span><span class="v" id="o_cost">— €</span></div>
       <div class="row"><span class="k">Cena / 1 km</span><span class="v" id="o_perkm">— €/km</span></div>
       <div class="row"><span class="k">Cena / 100 km</span><span class="v" id="o_per100">— €/100 km</span></div>
+      <button class="btn-danger" id="clearOutBtn" style="margin-top:12px;">✖ Vymazať výsledok</button>
     </div>
   </div>
 
-  <!-- Rozdelené úseky -->
+  <!-- Rozdelená trasa -->
   <div class="box">
     <h2>Rozdelená trasa podľa krajín</h2>
+
     <label for="avg2">Priemerná spotreba (l/100 km)</label>
-    <input id="avg2" type="text" inputmode="decimal" placeholder="napr. 6,5">
-    <button onclick="addSegment()">+ Pridať úsek</button>
+    <input id="avg2" type="text" inputmode="decimal" placeholder="napr. 6,5" />
+
+    <button id="addSegBtn">+ Pridať úsek</button>
+
     <div id="segments"></div>
+
     <div class="summary">
-      Spolu: <span id="tKm">0</span> km · <span id="tLiters">0</span> l · <span id="tCost">0 €</span>
+      Spolu: <span id="tKm">0,0</span> km · <span id="tLiters">0,00</span> l · <span id="tCost">0,00 €</span>
     </div>
   </div>
 
-<script>
-function fmt(n,d=2){return Number(n).toLocaleString('sk-SK',{minimumFractionDigits:d,maximumFractionDigits:d});}
-function parseVal(v){return parseFloat((v||"").replace(",","."));}
+  <script>
+    // --- Helpers ---
+    const $ = (id) => document.getElementById(id);
+    const fmt = (n, d = 2) =>
+      Number(n).toLocaleString("sk-SK", { minimumFractionDigits: d, maximumFractionDigits: d });
+    const parseVal = (v) => parseFloat(String(v || "").replace(",", "."));
 
-// Jednoduchý výpočet
-function calcSimple(){
-  document.getElementById("err").textContent="";
-  const km=parseVal(document.getElementById("km").value);
-  const avg=parseVal(document.getElementById("avg").value);
-  const price=parseVal(document.getElementById("price").value);
-  if(!(km>0)) return document.getElementById("err").textContent="Zadaj vzdialenosť";
-  if(!(avg>0)) return document.getElementById("err").textContent="Zadaj spotrebu";
-  if(!(price>0)) return document.getElementById("err").textContent="Zadaj cenu";
-  const liters=(avg/100)*km, cost=liters*price, perKm=cost/km, per100=perKm*100;
-  document.getElementById("o_dist").textContent=fmt(km,1)+" km";
-  document.getElementById("o_liters").textContent=fmt(liters,2)+" l";
-  document.getElementById("o_cost").textContent=fmt(cost,2)+" €";
-  document.getElementById("o_perkm").textContent=fmt(perKm,3)+" €/km";
-  document.getElementById("o_per100").textContent=fmt(per100,2)+" €/100 km";
-  document.getElementById("out").style.display="block";
-}
+    // --- Jednoduchý výpočet ---
+    function calcSimple() {
+      $("err").textContent = "";
+      const out = $("out");
+      out.style.display = "none"; // schovaj starý výsledok pri každom pokuse
 
-// Úseky
-let segId=0;
-function addSegment(name="", km="", price="") {
-  const container=document.getElementById("segments");
-  const id="seg"+(++segId);
-  const div=document.createElement("div");
-  div.className="segment";
-  div.innerHTML=`
-    <h3>Úsek ${segId}</h3>
-    <label>Názov</label><input class="name" value="${name}" placeholder="Slovensko">
-    <label>Kilometre</label><input class="km" value="${km}" placeholder="120">
-    <label>Cena €/l</label><input class="price" value="${price}" placeholder="1,42">
-    <div class="row"><span class="k">Litrov</span><span class="v liters">–</span></div>
-    <div class="row"><span class="k">Cena</span><span class="v cost">–</span></div>
-    <button class="removeBtn" style="background:#ef4444" onclick="this.parentNode.remove(); recalc()">✖ Odstrániť úsek</button>
-  `;
-  container.appendChild(div);
-  div.querySelectorAll("input").forEach(inp=>inp.addEventListener("input", recalc));
-  recalc();
-}
-function recalc(){
-  const avg=parseVal(document.getElementById("avg2").value);
-  let totalKm=0, totalLiters=0, totalCost=0;
-  document.querySelectorAll(".segment").forEach(seg=>{
-    const km=parseVal(seg.querySelector(".km").value);
-    const price=parseVal(seg.querySelector(".price").value);
-    let liters="–", cost="–";
-    if(avg>0 && km>0){
-      const l=(avg/100)*km; liters=fmt(l,2)+" l"; totalLiters+=l; totalKm+=km;
-      if(price>0){ const c=l*price; cost=fmt(c,2)+" €"; totalCost+=c; }
+      const km = parseVal($("km").value);
+      const avg = parseVal($("avg").value);
+      const price = parseVal($("price").value);
+
+      if (!(km > 0)) { $("err").textContent = "Zadaj vzdialenosť"; return; }
+      if (!(avg > 0)) { $("err").textContent = "Zadaj spotrebu"; return; }
+      if (!(price > 0)) { $("err").textContent = "Zadaj cenu"; return; }
+
+      const liters = (avg / 100) * km;
+      const cost = liters * price;
+      const perKm = cost / km;
+      const per100 = perKm * 100;
+
+      $("o_dist").textContent = fmt(km, 1) + " km";
+      $("o_liters").textContent = fmt(liters, 2) + " l";
+      $("o_cost").textContent = fmt(cost, 2) + " €";
+      $("o_perkm").textContent = fmt(perKm, 3) + " €/km";
+      $("o_per100").textContent = fmt(per100, 2) + " €/100 km";
+
+      out.style.display = "block";
     }
-    seg.querySelector(".liters").textContent=liters;
-    seg.querySelector(".cost").textContent=cost;
-  });
-  document.getElementById("tKm").textContent=fmt(totalKm,1);
-  document.getElementById("tLiters").textContent=fmt(totalLiters,2);
-  document.getElementById("tCost").textContent=fmt(totalCost,2)+" €";
-}
-</script>
+
+    function clearOut() {
+      $("out").style.display = "none";
+      $("err").textContent = "";
+      // voliteľne nechať vyplnené polia; ak chceš aj vymazať vstupy, odkomentuj:
+      // $("km").value = ""; $("avg").value = ""; $("price").value = "";
+    }
+
+    $("calcSimpleBtn").addEventListener("click", calcSimple);
+    $("clearOutBtn").addEventListener("click", clearOut);
+    ["km", "avg", "price"].forEach(id =>
+      $(id).addEventListener("keydown", e => { if (e.key === "Enter") calcSimple(); })
+    );
+
+    // --- Úseky (kartičky) ---
+    let segCounter = 0;
+
+    function addSegment(name = "", km = "", price = "") {
+      const wrap = document.createElement("div");
+      wrap.className = "segment";
+      const idx = ++segCounter;
+      wrap.innerHTML = `
+        <h3>Úsek ${idx}</h3>
+        <label>Názov</label><input class="name" value="${name}" placeholder="Slovensko" />
+        <label>Kilometre</label><input class="km" value="${km}" placeholder="120" inputmode="decimal" />
+        <label>Cena €/l</label><input class="price" value="${price}" placeholder="1,42" inputmode="decimal" />
+        <div class="row"><span class="k">Litrov</span><span class="v liters">–</span></div>
+        <div class="row"><span class="k">Cena</span><span class="v cost">–</span></div>
+        <button class="btn-danger remove">✖ Odstrániť úsek</button>
+      `;
+      $("segments").appendChild(wrap);
+
+      const onInput = () => recalc();
+      wrap.querySelectorAll("input").forEach(inp => inp.addEventListener("input", onInput));
+      wrap.querySelector(".remove").addEventListener("click", () => { wrap.remove(); recalc(); });
+
+      recalc();
+    }
+
+    function recalc() {
+      const avg = parseVal($("avg2").value);
+      let totalKm = 0, totalLiters = 0, totalCost = 0;
+
+      document.querySelectorAll(".segment").forEach(seg => {
+        const km = parseVal(seg.querySelector(".km").value);
+        const price = parseVal(seg.querySelector(".price").value);
+        let litersTxt = "–", costTxt = "–";
+
+        if (avg > 0 && km > 0) {
+          const l = (avg / 100) * km;
+          litersTxt = fmt(l, 2) + " l";
+          totalLiters += l; totalKm += km;
+
+          if (price > 0) {
+            const c = l * price;
+            costTxt = fmt(c, 2) + " €";
+            totalCost += c;
+          }
+        }
+        seg.querySelector(".liters").textContent = litersTxt;
+        seg.querySelector(".cost").textContent = costTxt;
+      });
+
+      $("tKm").textContent = fmt(totalKm, 1);
+      $("tLiters").textContent = fmt(totalLiters, 2);
+      $("tCost").textContent = fmt(totalCost, 2) + " €";
+    }
+
+    $("addSegBtn").addEventListener("click", () => addSegment());
+  </script>
 </body>
 </html>
-
