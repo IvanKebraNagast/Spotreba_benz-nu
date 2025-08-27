@@ -22,35 +22,21 @@
   <style>
     :root { --bg:#0b1220; --card:#101827; --line:#1f2937; --text:#e5e7eb; --muted:#9ca3af; --accent:#22c55e; --danger:#ef4444; }
     * { box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: var(--bg); color: var(--text); margin: 0; padding: 16px;
-    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 16px; }
     h1 { font-size: 1.5rem; margin: 0 0 16px; text-align: center; }
     h2 { font-size: 1.2rem; margin: 14px 0 10px; }
-    .box {
-      background: var(--card); border: 1px solid var(--line);
-      border-radius: 14px; padding: 16px; margin-bottom: 20px;
-    }
+    .box { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 20px; }
     label { display: block; margin: 6px 0 4px; color: var(--muted); font-size: .92rem; }
-    input {
-      width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--line);
-      background: #0b1220; color: var(--text); font-size: 1rem; margin-bottom: 10px;
-    }
-    button {
-      padding: 12px; border: 0; border-radius: 10px; background: var(--accent);
-      color: #fff; font-weight: 700; font-size: 1rem; width: 100%;
-    }
+    input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: #0b1220; color: var(--text); font-size: 1rem; margin-bottom: 10px; }
+    button { padding: 12px; border: 0; border-radius: 10px; background: var(--accent); color: #fff; font-weight: 700; font-size: 1rem; width: 100%; }
     button:active { transform: translateY(1px); }
     .btn-danger { background: var(--danger); }
+    .btn-ghost  { background: transparent; border: 1px solid var(--line); color: var(--text); }
+    .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .res { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
     .row { display: flex; justify-content: space-between; gap: 8px; margin: 6px 0; }
-    .k { color: var(--muted); }
-    .v { font-weight: 800; }
-    .segment {
-      background: #0b1220; border: 1px solid var(--line); border-radius: 12px;
-      padding: 12px; margin-bottom: 12px;
-    }
+    .k { color: var(--muted); } .v { font-weight: 800; }
+    .segment { background: #0b1220; border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
     .segment h3 { margin: 0 0 8px; font-size: 1rem; }
     .summary { font-weight: 700; font-size: 1.05rem; margin-top: 10px; }
     .error { color: var(--danger); margin-top: 8px; min-height: 1.2em; }
@@ -72,7 +58,11 @@
     <label for="price">Cena benzínu (€ / liter)</label>
     <input id="price" type="text" inputmode="decimal" placeholder="napr. 1,70" />
 
-    <button id="calcSimpleBtn">Vypočítať cenu</button>
+    <div class="btn-row" style="margin-top:6px;">
+      <button id="calcSimpleBtn">Vypočítať cenu</button>
+      <button class="btn-ghost" id="clearInputsBtn">Vymazať polia</button>
+    </div>
+
     <div id="err" class="error"></div>
 
     <div id="out" class="res" style="display:none">
@@ -92,7 +82,10 @@
     <label for="avg2">Priemerná spotreba (l/100 km)</label>
     <input id="avg2" type="text" inputmode="decimal" placeholder="napr. 6,5" />
 
-    <button id="addSegBtn">+ Pridať úsek</button>
+    <div class="btn-row" style="margin-top:6px;">
+      <button id="addSegBtn">+ Pridať úsek</button>
+      <button class="btn-ghost" id="resetAllBtn">Vymazať všetko</button>
+    </div>
 
     <div id="segments"></div>
 
@@ -104,9 +97,56 @@
   <script>
     // --- Helpers ---
     const $ = (id) => document.getElementById(id);
-    const fmt = (n, d = 2) =>
-      Number(n).toLocaleString("sk-SK", { minimumFractionDigits: d, maximumFractionDigits: d });
+    const fmt = (n, d = 2) => Number(n).toLocaleString("sk-SK", { minimumFractionDigits: d, maximumFractionDigits: d });
     const parseVal = (v) => parseFloat(String(v || "").replace(",", "."));
+    const SID = "cesta_pwa_v3";            // kľúč pre localStorage (verzia)
+
+    // --- Persistencia ---
+    function saveState() {
+      const data = {
+        simple: { km: $("km").value, avg: $("avg").value, price: $("price").value },
+        multi: {
+          avg: $("avg2").value,
+          segments: Array.from(document.querySelectorAll(".segment")).map(seg => ({
+            name: seg.querySelector(".name").value,
+            km:   seg.querySelector(".km").value,
+            price:seg.querySelector(".price").value
+          }))
+        }
+      };
+      try { localStorage.setItem(SID, JSON.stringify(data)); } catch {}
+    }
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(SID);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        if (data.simple) {
+          $("km").value   = data.simple.km   ?? "";
+          $("avg").value  = data.simple.avg  ?? "";
+          $("price").value= data.simple.price?? "";
+        }
+        if (data.multi) {
+          $("avg2").value = data.multi.avg ?? "";
+          (data.multi.segments || []).forEach(s => addSegment(s.name, s.km, s.price, false));
+        }
+      } catch {}
+    }
+    function resetAll() {
+      if (!confirm("Vymazať všetky uložené údaje?")) return;
+      try { localStorage.removeItem(SID); } catch {}
+      // vyčisti UI
+      ["km","avg","price","avg2"].forEach(id => $(id).value = "");
+      $("segments").innerHTML = "";
+      segCounter = 0;
+      $("out").style.display = "none";
+      $("err").textContent = "";
+      recalc();
+      saveState();
+    }
+    const debouncedSave = (() => {
+      let t; return () => { clearTimeout(t); t = setTimeout(saveState, 150); };
+    })();
 
     // --- Jednoduchý výpočet ---
     function calcSimple() {
@@ -127,32 +167,40 @@
       const perKm = cost / km;
       const per100 = perKm * 100;
 
-      $("o_dist").textContent = fmt(km, 1) + " km";
+      $("o_dist").textContent   = fmt(km, 1) + " km";
       $("o_liters").textContent = fmt(liters, 2) + " l";
-      $("o_cost").textContent = fmt(cost, 2) + " €";
-      $("o_perkm").textContent = fmt(perKm, 3) + " €/km";
+      $("o_cost").textContent   = fmt(cost, 2) + " €";
+      $("o_perkm").textContent  = fmt(perKm, 3) + " €/km";
       $("o_per100").textContent = fmt(per100, 2) + " €/100 km";
 
       out.style.display = "block";
+      saveState();
     }
-
     function clearOut() {
       $("out").style.display = "none";
       $("err").textContent = "";
-      // voliteľne nechať vyplnené polia; ak chceš aj vymazať vstupy, odkomentuj:
-      // $("km").value = ""; $("avg").value = ""; $("price").value = "";
+    }
+    function clearInputs() {
+      ["km","avg","price"].forEach(id => $(id).value = "");
+      $("out").style.display = "none";
+      $("err").textContent = "";
+      saveState();
     }
 
     $("calcSimpleBtn").addEventListener("click", calcSimple);
     $("clearOutBtn").addEventListener("click", clearOut);
-    ["km", "avg", "price"].forEach(id =>
+    $("clearInputsBtn").addEventListener("click", clearInputs);
+    ["km","avg","price"].forEach(id =>
+      $(id).addEventListener("input", debouncedSave)
+    );
+    ["km","avg","price"].forEach(id =>
       $(id).addEventListener("keydown", e => { if (e.key === "Enter") calcSimple(); })
     );
 
     // --- Úseky (kartičky) ---
     let segCounter = 0;
 
-    function addSegment(name = "", km = "", price = "") {
+    function addSegment(name = "", km = "", price = "", doSave = true) {
       const wrap = document.createElement("div");
       wrap.className = "segment";
       const idx = ++segCounter;
@@ -163,15 +211,26 @@
         <label>Cena €/l</label><input class="price" value="${price}" placeholder="1,42" inputmode="decimal" />
         <div class="row"><span class="k">Litrov</span><span class="v liters">–</span></div>
         <div class="row"><span class="k">Cena</span><span class="v cost">–</span></div>
-        <button class="btn-danger remove">✖ Odstrániť úsek</button>
+        <div class="btn-row" style="margin-top:6px;">
+          <button class="btn-danger remove">✖ Odstrániť úsek</button>
+          <button class="btn-ghost dup">Duplikovať</button>
+        </div>
       `;
       $("segments").appendChild(wrap);
 
-      const onInput = () => recalc();
+      const onInput = () => { recalc(); debouncedSave(); };
       wrap.querySelectorAll("input").forEach(inp => inp.addEventListener("input", onInput));
-      wrap.querySelector(".remove").addEventListener("click", () => { wrap.remove(); recalc(); });
+      wrap.querySelector(".remove").addEventListener("click", () => { wrap.remove(); recalc(); saveState(); });
+      wrap.querySelector(".dup").addEventListener("click", () => {
+        addSegment(
+          wrap.querySelector(".name").value,
+          wrap.querySelector(".km").value,
+          wrap.querySelector(".price").value
+        );
+      });
 
       recalc();
+      if (doSave) saveState();
     }
 
     function recalc() {
@@ -203,7 +262,13 @@
       $("tCost").textContent = fmt(totalCost, 2) + " €";
     }
 
-    $("addSegBtn").addEventListener("click", () => addSegment());
+    $("addSegBtn").addEventListener("click", () => { addSegment(); saveState(); });
+    $("avg2").addEventListener("input", () => { recalc(); debouncedSave(); });
+    $("resetAllBtn").addEventListener("click", resetAll);
+
+    // --- Inicializácia ---
+    loadState();
+    recalc();
   </script>
 </body>
 </html>
