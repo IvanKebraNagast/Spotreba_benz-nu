@@ -13,7 +13,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
-  <!-- jsPDF (na export PDF; stačí raz online, potom je v cache) -->
+  <!-- jsPDF na PDF export (načítaj raz online, potom cache) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
   <script>
@@ -115,26 +115,21 @@
     const $ = id => document.getElementById(id);
     const fmt = (n,d=2)=>Number(n).toLocaleString("sk-SK",{minimumFractionDigits:d,maximumFractionDigits:d});
     const parseVal = v => parseFloat(String(v||"").replace(",","."));
-    const SID="cesta_tank_v3";      // stav denníka (verzia)
+    const SID="cesta_tank_v3";      // stav denníka
     const HID="cesta_history_v1";   // história
 
     // ===== Prepínanie menu/história
-    $("menuBtn").addEventListener("click",()=>{
-      $("main").classList.remove("hidden");
-      $("history").classList.add("hidden");
-      $("menuBtn").classList.add("active");
-      $("historyBtn").classList.remove("active");
-      loadHistory();
-    });
-    $("historyBtn").addEventListener("click",()=>{
-      $("main").classList.add("hidden");
-      $("history").classList.remove("hidden");
-      $("historyBtn").classList.add("active");
-      $("menuBtn").classList.remove("active");
-      loadHistory();
-    });
+    $("menuBtn").addEventListener("click",()=>{ toggleView(true); });
+    $("historyBtn").addEventListener("click",()=>{ toggleView(false); });
+    function toggleView(main=true){
+      $("main").classList.toggle("hidden", !main);
+      $("history").classList.toggle("hidden", main);
+      $("menuBtn").classList.toggle("active", main);
+      $("historyBtn").classList.toggle("active", !main);
+      if (!main) loadHistory();
+    }
 
-    // ===== Jednoduchý výpočet (nezmenený)
+    // ===== Jednoduchý výpočet
     function calcSimple(){
       $("err").textContent=""; $("out").classList.add("hidden");
       const km=parseVal($("km").value), avg=parseVal($("avg").value), price=parseVal($("price").value);
@@ -161,7 +156,7 @@
         <h3>Tankovanie ${idx} <button class="btn-danger" style="width:auto;padding:4px 8px;font-size:.8rem;">✖</button></h3>
         <label>Názov úseku (napr. Slovensko)</label><input class="name" value="${name}" placeholder="Slovensko" />
         <label>Stav tachometra (km)</label><input class="tacho" value="${tacho}" placeholder="88000" inputmode="decimal" />
-        <label>Cena benzínu €/l</label><input class="price" value="${price}" placeholder="1,52" inputmode="decimal" />
+        <label>Cena €/l</label><input class="price" value="${price}" placeholder="1,52" inputmode="decimal" />
         <label>Suma tankovania (€)</label><input class="sum" value="${sum}" placeholder="67" inputmode="decimal" />
         <div class="row"><span class="k">Prejdené km</span><span class="v km">–</span></div>
         <div class="row"><span class="k">Litrov (z tohto tankovania)</span><span class="v liters">–</span></div>
@@ -170,10 +165,7 @@
       `;
       $("segments").appendChild(wrap);
 
-      // zmazanie karty
       wrap.querySelector("button").addEventListener("click",()=>{wrap.remove(); recalc(); saveState();});
-
-      // prepočítavať pri zmene
       wrap.querySelectorAll("input").forEach(inp=>inp.addEventListener("input",()=>{recalc(); saveState();}));
 
       recalc(); saveState();
@@ -193,31 +185,41 @@
       for(let i=1;i<segs.length;i++){
         const prev=segs[i-1], cur=segs[i];
 
-        // km sa počítajú z rozdielu tacho, litre a cena z AKTUÁLNEHO tankovania (full-tank metóda)
-        if(cur.tacho>0 && prev.tacho>0 && cur.price>0 && cur.sum>0){
+        const haveKm = cur.tacho>0 && prev.tacho>0;
+        const haveFuel = cur.price>0 && cur.sum>0;
+
+        if (haveKm) {
           const km = cur.tacho - prev.tacho;
-          const liters = cur.sum / cur.price;
-          const avg = km>0 ? (liters/km*100) : 0;
-          const perkm = km>0 ? (cur.sum/km) : 0;
-
           cur.el.querySelector(".km").textContent = fmt(km,1)+" km";
-          cur.el.querySelector(".liters").textContent = fmt(liters,2)+" l";
-          cur.el.querySelector(".avg").textContent = fmt(avg,2)+" l/100 km";
-          cur.el.querySelector(".perkm").textContent = fmt(perkm,3)+" €/km";
 
-          totalKm += km; totalLiters += liters; totalCost += cur.sum;
+          if (haveFuel) {
+            const liters = cur.sum / cur.price;
+            const avg = km>0 ? (liters/km*100) : 0;
+            const perkm = km>0 ? (cur.sum/km) : 0;
 
-          // ulož do histórie (bez duplikátov) – kľúč viazaný na hodnoty
-          const saveKey = `${cur.tacho}|${prev.tacho}|${cur.price}|${cur.sum}|${cur.name}`;
-          if (cur.el.dataset.lastSaved !== saveKey) {
-            cur.el.dataset.lastSaved = saveKey;
-            saveHistory({
-              date: new Date().toLocaleString(),
-              name: cur.name || `Tankovanie ${i+1}`,
-              tacho: cur.tacho,
-              km, liters, avg,
-              sum: cur.sum
-            });
+            cur.el.querySelector(".liters").textContent = fmt(liters,2)+" l";
+            cur.el.querySelector(".avg").textContent    = fmt(avg,2)+" l/100 km";
+            cur.el.querySelector(".perkm").textContent  = fmt(perkm,3)+" €/km";
+
+            totalKm += km; totalLiters += liters; totalCost += cur.sum;
+
+            // ulož do histórie bez duplikátu
+            const saveKey = `${cur.name}|${cur.tacho}|${prev.tacho}|${cur.price}|${cur.sum}`;
+            if (cur.el.dataset.lastSaved !== saveKey) {
+              cur.el.dataset.lastSaved = saveKey;
+              saveHistory({
+                date: new Date().toLocaleString(),
+                name: cur.name || `Tankovanie ${i+1}`,
+                tacho: cur.tacho,
+                km, liters, avg,
+                sum: cur.sum
+              });
+            }
+          } else {
+            // len konečný stav km – bez paliva
+            cur.el.querySelector(".liters").textContent = "–";
+            cur.el.querySelector(".avg").textContent    = "–";
+            cur.el.querySelector(".perkm").textContent  = "–";
           }
         } else {
           cur.el.querySelector(".km").textContent = "–";
