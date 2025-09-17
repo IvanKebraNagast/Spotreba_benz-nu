@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <title>Kalkulačka nákladov na cestu</title>
 
-  <!-- PWA (NEMENÍME manifest ani sw.js) -->
+  <!-- PWA (nemeníme) -->
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.png" type="image/png" />
   <link rel="apple-touch-icon" sizes="180x180" href="icon.png?v=11" />
@@ -13,8 +13,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
-  <!-- jsPDF pre export (načítaj raz online, potom sa drží v cache) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-YkWqj0JwF8mK4wqS20i7mWvUO5p7hoxq4u81M1yHqg1k2sRkV9lFQ1lCw1lC1yxfQGqU7pJb0P0UeQkUGG5mWQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <!-- jsPDF (na export PDF; stačí raz online, potom je v cache) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
   <script>
     if ("serviceWorker" in navigator) {
@@ -25,31 +25,30 @@
   <style>
     :root { --bg:#0b1220; --card:#101827; --line:#1f2937; --text:#e5e7eb; --muted:#9ca3af; --accent:#22c55e; --danger:#ef4444; --blue:#3b82f6; }
     * { box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 16px; }
-    h1 { font-size: 1.5rem; margin: 0 0 16px; text-align: center; }
-    h2 { font-size: 1.2rem; margin: 14px 0 10px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin:0; padding:16px; }
+    h1 { font-size:1.5rem; margin:0 0 16px; text-align:center; }
+    h2 { font-size:1.2rem; margin:14px 0 10px; }
     nav { display:flex; gap:10px; justify-content:center; margin-bottom:16px; }
-    nav button { flex:1; padding:10px; border:0; border-radius:8px; font-weight:600; cursor:pointer; }
+    nav button { flex:1; padding:10px; border:0; border-radius:8px; font-weight:600; }
     nav .active { background:var(--accent); color:#fff; }
     .hidden { display:none; }
-    .box { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 20px; }
-    label { display: block; margin: 6px 0 4px; color: var(--muted); font-size: .92rem; }
-    input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: #0b1220; color: var(--text); font-size: 1rem; margin-bottom: 10px; }
-    button { padding: 12px; border: 0; border-radius: 10px; background: var(--accent); color: #fff; font-weight: 700; font-size: 1rem; width: 100%; margin-top:6px; }
-    button:active { transform: translateY(1px); }
-    .btn-danger { background: var(--danger); }
-    .btn-blue { background: var(--blue); }
-    .res { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
-    .row { display: flex; justify-content: space-between; gap: 8px; margin: 6px 0; }
-    .k { color: var(--muted); }
-    .v { font-weight: 800; }
-    .segment { background: #0b1220; border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 12px; }
-    .segment h3 { margin: 0 0 8px; font-size: 1rem; display:flex; justify-content:space-between; align-items:center; }
-    .summary { font-weight: 700; font-size: 1.05rem; margin-top: 10px; }
-    .error { color: var(--danger); margin-top: 8px; min-height: 1.2em; }
+    .box { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:20px; }
+    label { display:block; margin:6px 0 4px; color:var(--muted); font-size:.92rem; }
+    input { width:100%; padding:12px; border-radius:10px; border:1px solid var(--line); background:#0b1220; color:#fff; font-size:1rem; margin-bottom:10px; }
+    button { padding:12px; border:0; border-radius:10px; background:var(--accent); color:#fff; font-weight:700; font-size:1rem; width:100%; margin-top:6px; }
+    button:active { transform:translateY(1px); }
+    .btn-danger { background:var(--danger); }
+    .btn-blue { background:var(--blue); }
+    .res { margin-top:12px; border-top:1px solid var(--line); padding-top:12px; }
+    .row { display:flex; justify-content:space-between; gap:8px; margin:6px 0; }
+    .k { color:var(--muted); } .v { font-weight:800; }
+    .segment { background:#0b1220; border:1px solid var(--line); border-radius:12px; padding:12px; margin-bottom:12px; }
+    .segment h3 { margin:0 0 8px; font-size:1rem; display:flex; justify-content:space-between; align-items:center; }
+    .summary { font-weight:700; font-size:1.05rem; margin-top:10px; }
     table { width:100%; border-collapse:collapse; margin-top:10px; font-size:.9rem; }
     th,td { padding:6px; border-bottom:1px solid var(--line); text-align:left; }
     th { color:var(--muted); }
+    .error { color:var(--danger); min-height:1.2em; margin-top:8px; }
   </style>
 </head>
 <body>
@@ -62,7 +61,7 @@
 
   <!-- Hlavné menu -->
   <div id="main">
-    <!-- Jednoduchý výpočet -->
+    <!-- Jednoduchý výpočet (bez zmeny) -->
     <div class="box">
       <h2>Jednoduchý výpočet</h2>
       <label for="km">Vzdialenosť (km)</label>
@@ -83,7 +82,7 @@
       </div>
     </div>
 
-    <!-- Denník tankovaní -->
+    <!-- Denník tankovaní (tachometer + cena/l + suma) -->
     <div class="box">
       <h2>Denník tankovaní</h2>
       <button id="addSegBtn">+ Pridať tankovanie</button>
@@ -104,7 +103,7 @@
       </div>
       <table id="historyTable">
         <thead>
-          <tr><th>Dátum</th><th>Tachometer</th><th>Km</th><th>Litrov</th><th>Spotreba</th><th>Suma €</th></tr>
+          <tr><th>Dátum</th><th>Názov</th><th>Tachometer</th><th>Km</th><th>Litrov</th><th>Spotreba</th><th>Suma €</th></tr>
         </thead>
         <tbody></tbody>
       </table>
@@ -116,7 +115,7 @@
     const $ = id => document.getElementById(id);
     const fmt = (n,d=2)=>Number(n).toLocaleString("sk-SK",{minimumFractionDigits:d,maximumFractionDigits:d});
     const parseVal = v => parseFloat(String(v||"").replace(",","."));
-    const SID="cesta_tank_v2";      // stav denníka
+    const SID="cesta_tank_v3";      // stav denníka (verzia)
     const HID="cesta_history_v1";   // história
 
     // ===== Prepínanie menu/história
@@ -155,86 +154,98 @@
 
     // ===== Denník tankovaní
     let segId=0;
-    function addSegment(tacho="",price="",sum=""){
+    function addSegment(name="",tacho="",price="",sum=""){
       const wrap=document.createElement("div"); wrap.className="segment";
       const idx=++segId;
       wrap.innerHTML=`
         <h3>Tankovanie ${idx} <button class="btn-danger" style="width:auto;padding:4px 8px;font-size:.8rem;">✖</button></h3>
+        <label>Názov úseku (napr. Slovensko)</label><input class="name" value="${name}" placeholder="Slovensko" />
         <label>Stav tachometra (km)</label><input class="tacho" value="${tacho}" placeholder="88000" inputmode="decimal" />
-        <label>Cena €/l</label><input class="price" value="${price}" placeholder="1,52" inputmode="decimal" />
+        <label>Cena benzínu €/l</label><input class="price" value="${price}" placeholder="1,52" inputmode="decimal" />
         <label>Suma tankovania (€)</label><input class="sum" value="${sum}" placeholder="67" inputmode="decimal" />
         <div class="row"><span class="k">Prejdené km</span><span class="v km">–</span></div>
-        <div class="row"><span class="k">Litrov</span><span class="v liters">–</span></div>
+        <div class="row"><span class="k">Litrov (z tohto tankovania)</span><span class="v liters">–</span></div>
         <div class="row"><span class="k">Spotreba</span><span class="v avg">–</span></div>
+        <div class="row"><span class="k">Cena / km</span><span class="v perkm">–</span></div>
       `;
       $("segments").appendChild(wrap);
-      // zmazanie tankovania
+
+      // zmazanie karty
       wrap.querySelector("button").addEventListener("click",()=>{wrap.remove(); recalc(); saveState();});
-      // prepočet na zmenu
+
+      // prepočítavať pri zmene
       wrap.querySelectorAll("input").forEach(inp=>inp.addEventListener("input",()=>{recalc(); saveState();}));
+
       recalc(); saveState();
     }
 
     function recalc(){
       const segs=[...document.querySelectorAll(".segment")].map(seg=>({
         el:seg,
+        name: seg.querySelector(".name").value.trim(),
         tacho:parseVal(seg.querySelector(".tacho").value),
         price:parseVal(seg.querySelector(".price").value),
         sum:parseVal(seg.querySelector(".sum").value)
       }));
+
       let totalKm=0,totalLiters=0,totalCost=0;
 
       for(let i=1;i<segs.length;i++){
-        const prev=segs[i-1],cur=segs[i];
-        if(cur.tacho>0&&prev.tacho>0&&cur.price>0&&cur.sum>0){
-          const km=cur.tacho-prev.tacho;
-          const liters=cur.sum/cur.price;
-          const avg=km>0?(liters/km*100):0;
+        const prev=segs[i-1], cur=segs[i];
 
-          cur.el.querySelector(".km").textContent=fmt(km,1)+" km";
-          cur.el.querySelector(".liters").textContent=fmt(liters,2)+" l";
-          cur.el.querySelector(".avg").textContent=fmt(avg,2)+" l/100 km";
+        // km sa počítajú z rozdielu tacho, litre a cena z AKTUÁLNEHO tankovania (full-tank metóda)
+        if(cur.tacho>0 && prev.tacho>0 && cur.price>0 && cur.sum>0){
+          const km = cur.tacho - prev.tacho;
+          const liters = cur.sum / cur.price;
+          const avg = km>0 ? (liters/km*100) : 0;
+          const perkm = km>0 ? (cur.sum/km) : 0;
 
-          totalKm+=km; totalLiters+=liters; totalCost+=cur.sum;
+          cur.el.querySelector(".km").textContent = fmt(km,1)+" km";
+          cur.el.querySelector(".liters").textContent = fmt(liters,2)+" l";
+          cur.el.querySelector(".avg").textContent = fmt(avg,2)+" l/100 km";
+          cur.el.querySelector(".perkm").textContent = fmt(perkm,3)+" €/km";
 
-          // ulož do histórie (bez duplikátov) – kľúč podľa aktuálnych hodnôt
-          const saveKey = `${cur.tacho}|${prev.tacho}|${cur.price}|${cur.sum}`;
+          totalKm += km; totalLiters += liters; totalCost += cur.sum;
+
+          // ulož do histórie (bez duplikátov) – kľúč viazaný na hodnoty
+          const saveKey = `${cur.tacho}|${prev.tacho}|${cur.price}|${cur.sum}|${cur.name}`;
           if (cur.el.dataset.lastSaved !== saveKey) {
             cur.el.dataset.lastSaved = saveKey;
             saveHistory({
               date: new Date().toLocaleString(),
+              name: cur.name || `Tankovanie ${i+1}`,
               tacho: cur.tacho,
-              km: km,
-              liters: liters,
-              avg: avg,
+              km, liters, avg,
               sum: cur.sum
             });
           }
         } else {
-          cur.el.querySelector(".km").textContent="–";
-          cur.el.querySelector(".liters").textContent="–";
-          cur.el.querySelector(".avg").textContent="–";
-          // neukladáme nič, kým nie sú dáta kompletné
+          cur.el.querySelector(".km").textContent = "–";
+          cur.el.querySelector(".liters").textContent = "–";
+          cur.el.querySelector(".avg").textContent = "–";
+          cur.el.querySelector(".perkm").textContent = "–";
         }
       }
-      $("tKm").textContent=fmt(totalKm,1);
-      $("tLiters").textContent=fmt(totalLiters,2);
-      $("tCost").textContent=fmt(totalCost,2)+" €";
-      $("tAvg").textContent=totalKm>0?fmt(totalLiters/totalKm*100,2):"0";
+
+      $("tKm").textContent = fmt(totalKm,1);
+      $("tLiters").textContent = fmt(totalLiters,2);
+      $("tCost").textContent = fmt(totalCost,2) + " €";
+      $("tAvg").textContent = totalKm>0 ? fmt(totalLiters/totalKm*100,2) : "0";
     }
 
     function saveState(){
       const data=[...document.querySelectorAll(".segment")].map(seg=>({
-        tacho:seg.querySelector(".tacho").value,
-        price:seg.querySelector(".price").value,
-        sum:seg.querySelector(".sum").value
+        name: seg.querySelector(".name").value,
+        tacho: seg.querySelector(".tacho").value,
+        price: seg.querySelector(".price").value,
+        sum: seg.querySelector(".sum").value
       }));
-      localStorage.setItem(SID,JSON.stringify(data));
+      localStorage.setItem(SID, JSON.stringify(data));
     }
     function loadState(){
       try{
-        const data=JSON.parse(localStorage.getItem(SID)||"[]");
-        data.forEach(s=>addSegment(s.tacho,s.price,s.sum));
+        const data = JSON.parse(localStorage.getItem(SID) || "[]");
+        data.forEach(s => addSegment(s.name, s.tacho, s.price, s.sum));
       }catch{}
     }
     $("addSegBtn").addEventListener("click",()=>addSegment());
@@ -242,50 +253,38 @@
 
     // ===== História
     function saveHistory(entry){
-      let h=JSON.parse(localStorage.getItem(HID)||"[]");
+      let h = JSON.parse(localStorage.getItem(HID) || "[]");
       h.push(entry);
-      localStorage.setItem(HID,JSON.stringify(h));
+      localStorage.setItem(HID, JSON.stringify(h));
     }
     function loadHistory(){
-      const h=JSON.parse(localStorage.getItem(HID)||"[]");
-      const tbody=$("historyTable").querySelector("tbody");
-      tbody.innerHTML="";
+      const h = JSON.parse(localStorage.getItem(HID) || "[]");
+      const tbody = $("historyTable").querySelector("tbody");
+      tbody.innerHTML = "";
       h.forEach(e=>{
-        const tr=document.createElement("tr");
-        tr.innerHTML=`<td>${e.date}</td><td>${fmt(e.tacho,0)}</td><td>${fmt(e.km,1)}</td><td>${fmt(e.liters,2)}</td><td>${fmt(e.avg,2)} l/100</td><td>${fmt(e.sum,2)}</td>`;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${e.date}</td><td>${e.name||""}</td><td>${fmt(e.tacho,0)}</td><td>${fmt(e.km,1)}</td><td>${fmt(e.liters,2)}</td><td>${fmt(e.avg,2)} l/100</td><td>${fmt(e.sum,2)}</td>`;
         tbody.appendChild(tr);
       });
     }
     $("clearHistoryBtn").addEventListener("click",()=>{
-      if(confirm("Naozaj vymazať históriu?")){
-        localStorage.removeItem(HID);
-        loadHistory();
-      }
+      if(confirm("Naozaj vymazať históriu?")){ localStorage.removeItem(HID); loadHistory(); }
     });
 
-    // ===== Export do PDF (opravené backticky)
+    // ===== Export do PDF
     $("exportPdfBtn").addEventListener("click", () => {
       const h = JSON.parse(localStorage.getItem(HID) || "[]");
       if (!h.length) { alert("História je prázdna"); return; }
-
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
-
-      doc.setFontSize(14);
-      doc.text("História tankovaní", 14, 16);
-
-      let y = 24;
-      doc.setFontSize(10);
-
+      doc.setFontSize(14); doc.text("História tankovaní", 14, 16);
+      let y = 24; doc.setFontSize(10);
       h.forEach((e, i) => {
-        const line = `${i + 1}. ${e.date} | Tacho: ${fmt(e.tacho,0)} km | Km: ${fmt(e.km, 1)} | ` +
-                     `Litrov: ${fmt(e.liters, 2)} | Spotreba: ${fmt(e.avg, 2)} l/100 | ` +
-                     `Suma: ${fmt(e.sum, 2)} €`;
+        const line = `${i + 1}. ${e.date} | ${e.name || ""} | Tacho: ${fmt(e.tacho,0)} km | Km: ${fmt(e.km,1)} | ` +
+                     `Litrov: ${fmt(e.liters,2)} | Spotreba: ${fmt(e.avg,2)} l/100 | Suma: ${fmt(e.sum,2)} €`;
         doc.text(line, 14, y);
-        y += 6;
-        if (y > 280) { doc.addPage(); y = 20; }
+        y += 6; if (y > 280) { doc.addPage(); y = 20; }
       });
-
       doc.save("historia_tankovani.pdf");
     });
   </script>
