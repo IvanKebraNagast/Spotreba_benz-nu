@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
   <title>Kalkulačka nákladov na cestu</title>
 
-  <!-- PWA -->
+  <!-- PWA (NEMENÍME manifest ani sw.js) -->
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.png" type="image/png" />
   <link rel="apple-touch-icon" sizes="180x180" href="icon.png?v=11" />
@@ -13,8 +13,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
-  <!-- jsPDF pre export -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- jsPDF pre export (načítaj raz online, potom sa drží v cache) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-YkWqj0JwF8mK4wqS20i7mWvUO5p7hoxq4u81M1yHqg1k2sRkV9lFQ1lCw1lC1yxfQGqU7pJb0P0UeQkUGG5mWQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
   <script>
     if ("serviceWorker" in navigator) {
@@ -38,7 +38,6 @@
     button { padding: 12px; border: 0; border-radius: 10px; background: var(--accent); color: #fff; font-weight: 700; font-size: 1rem; width: 100%; margin-top:6px; }
     button:active { transform: translateY(1px); }
     .btn-danger { background: var(--danger); }
-    .btn-ghost { background: transparent; border: 1px solid var(--line); color: var(--text); }
     .btn-blue { background: var(--blue); }
     .res { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
     .row { display: flex; justify-content: space-between; gap: 8px; margin: 6px 0; }
@@ -99,7 +98,7 @@
   <div id="history" class="hidden">
     <div class="box">
       <h2>História tankovaní</h2>
-      <div class="toolbar">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
         <button class="btn-blue" id="exportPdfBtn">Exportovať do PDF</button>
         <button class="btn-danger" id="clearHistoryBtn">Vymazať históriu</button>
       </div>
@@ -113,17 +112,30 @@
   </div>
 
   <script>
-    const $=id=>document.getElementById(id);
-    const fmt=(n,d=2)=>Number(n).toLocaleString("sk-SK",{minimumFractionDigits:d,maximumFractionDigits:d});
-    const parseVal=v=>parseFloat(String(v||"").replace(",","."));
-    const SID="cesta_tank_v2";
-    const HID="cesta_history_v1";
+    // ===== Helpers
+    const $ = id => document.getElementById(id);
+    const fmt = (n,d=2)=>Number(n).toLocaleString("sk-SK",{minimumFractionDigits:d,maximumFractionDigits:d});
+    const parseVal = v => parseFloat(String(v||"").replace(",","."));
+    const SID="cesta_tank_v2";      // stav denníka
+    const HID="cesta_history_v1";   // história
 
-    // prepínanie menu/história
-    $("menuBtn").addEventListener("click",()=>{ $("main").classList.remove("hidden"); $("history").classList.add("hidden"); $("menuBtn").classList.add("active"); $("historyBtn").classList.remove("active"); loadHistory(); });
-    $("historyBtn").addEventListener("click",()=>{ $("main").classList.add("hidden"); $("history").classList.remove("hidden"); $("historyBtn").classList.add("active"); $("menuBtn").classList.remove("active"); loadHistory(); });
+    // ===== Prepínanie menu/história
+    $("menuBtn").addEventListener("click",()=>{
+      $("main").classList.remove("hidden");
+      $("history").classList.add("hidden");
+      $("menuBtn").classList.add("active");
+      $("historyBtn").classList.remove("active");
+      loadHistory();
+    });
+    $("historyBtn").addEventListener("click",()=>{
+      $("main").classList.add("hidden");
+      $("history").classList.remove("hidden");
+      $("historyBtn").classList.add("active");
+      $("menuBtn").classList.remove("active");
+      loadHistory();
+    });
 
-    // jednoduchý výpočet
+    // ===== Jednoduchý výpočet (nezmenený)
     function calcSimple(){
       $("err").textContent=""; $("out").classList.add("hidden");
       const km=parseVal($("km").value), avg=parseVal($("avg").value), price=parseVal($("price").value);
@@ -141,7 +153,7 @@
     $("calcSimpleBtn").addEventListener("click",calcSimple);
     $("clearOutBtn").addEventListener("click",()=>{$("out").classList.add("hidden");});
 
-    // denník tankovaní
+    // ===== Denník tankovaní
     let segId=0;
     function addSegment(tacho="",price="",sum=""){
       const wrap=document.createElement("div"); wrap.className="segment";
@@ -156,32 +168,53 @@
         <div class="row"><span class="k">Spotreba</span><span class="v avg">–</span></div>
       `;
       $("segments").appendChild(wrap);
+      // zmazanie tankovania
       wrap.querySelector("button").addEventListener("click",()=>{wrap.remove(); recalc(); saveState();});
+      // prepočet na zmenu
       wrap.querySelectorAll("input").forEach(inp=>inp.addEventListener("input",()=>{recalc(); saveState();}));
       recalc(); saveState();
     }
 
     function recalc(){
       const segs=[...document.querySelectorAll(".segment")].map(seg=>({
-        el:seg,tacho:parseVal(seg.querySelector(".tacho").value),price:parseVal(seg.querySelector(".price").value),sum:parseVal(seg.querySelector(".sum").value)
+        el:seg,
+        tacho:parseVal(seg.querySelector(".tacho").value),
+        price:parseVal(seg.querySelector(".price").value),
+        sum:parseVal(seg.querySelector(".sum").value)
       }));
       let totalKm=0,totalLiters=0,totalCost=0;
+
       for(let i=1;i<segs.length;i++){
         const prev=segs[i-1],cur=segs[i];
         if(cur.tacho>0&&prev.tacho>0&&cur.price>0&&cur.sum>0){
           const km=cur.tacho-prev.tacho;
           const liters=cur.sum/cur.price;
           const avg=km>0?(liters/km*100):0;
+
           cur.el.querySelector(".km").textContent=fmt(km,1)+" km";
           cur.el.querySelector(".liters").textContent=fmt(liters,2)+" l";
           cur.el.querySelector(".avg").textContent=fmt(avg,2)+" l/100 km";
+
           totalKm+=km; totalLiters+=liters; totalCost+=cur.sum;
-          // uložiť do histórie
-          saveHistory({date:new Date().toLocaleString(),tacho:cur.tacho,km:km,liters:liters,avg:avg,sum:cur.sum});
+
+          // ulož do histórie (bez duplikátov) – kľúč podľa aktuálnych hodnôt
+          const saveKey = `${cur.tacho}|${prev.tacho}|${cur.price}|${cur.sum}`;
+          if (cur.el.dataset.lastSaved !== saveKey) {
+            cur.el.dataset.lastSaved = saveKey;
+            saveHistory({
+              date: new Date().toLocaleString(),
+              tacho: cur.tacho,
+              km: km,
+              liters: liters,
+              avg: avg,
+              sum: cur.sum
+            });
+          }
         } else {
           cur.el.querySelector(".km").textContent="–";
           cur.el.querySelector(".liters").textContent="–";
           cur.el.querySelector(".avg").textContent="–";
+          // neukladáme nič, kým nie sú dáta kompletné
         }
       }
       $("tKm").textContent=fmt(totalKm,1);
@@ -192,21 +225,26 @@
 
     function saveState(){
       const data=[...document.querySelectorAll(".segment")].map(seg=>({
-        tacho:seg.querySelector(".tacho").value,price:seg.querySelector(".price").value,sum:seg.querySelector(".sum").value
+        tacho:seg.querySelector(".tacho").value,
+        price:seg.querySelector(".price").value,
+        sum:seg.querySelector(".sum").value
       }));
       localStorage.setItem(SID,JSON.stringify(data));
     }
     function loadState(){
-      try{const data=JSON.parse(localStorage.getItem(SID)||"[]");data.forEach(s=>addSegment(s.tacho,s.price,s.sum));}catch{}
+      try{
+        const data=JSON.parse(localStorage.getItem(SID)||"[]");
+        data.forEach(s=>addSegment(s.tacho,s.price,s.sum));
+      }catch{}
     }
-
     $("addSegBtn").addEventListener("click",()=>addSegment());
     loadState(); recalc();
 
-    // história
+    // ===== História
     function saveHistory(entry){
       let h=JSON.parse(localStorage.getItem(HID)||"[]");
-      h.push(entry); localStorage.setItem(HID,JSON.stringify(h));
+      h.push(entry);
+      localStorage.setItem(HID,JSON.stringify(h));
     }
     function loadHistory(){
       const h=JSON.parse(localStorage.getItem(HID)||"[]");
@@ -218,19 +256,36 @@
         tbody.appendChild(tr);
       });
     }
-    $("clearHistoryBtn").addEventListener("click",()=>{if(confirm("Naozaj vymazať históriu?")){localStorage.removeItem(HID);loadHistory();}});
-    $("exportPdfBtn").addEventListener("click",()=>{
-      const h=JSON.parse(localStorage.getItem(HID)||"[]");
-      if(!h.length){alert("História je prázdna");return;}
+    $("clearHistoryBtn").addEventListener("click",()=>{
+      if(confirm("Naozaj vymazať históriu?")){
+        localStorage.removeItem(HID);
+        loadHistory();
+      }
+    });
+
+    // ===== Export do PDF (opravené backticky)
+    $("exportPdfBtn").addEventListener("click", () => {
+      const h = JSON.parse(localStorage.getItem(HID) || "[]");
+      if (!h.length) { alert("História je prázdna"); return; }
+
       const { jsPDF } = window.jspdf;
-      const doc=new jsPDF();
-      doc.setFontSize(14); doc.text("História tankovaní",14,16);
-      let y=24;
+      const doc = new jsPDF();
+
+      doc.setFontSize(14);
+      doc.text("História tankovaní", 14, 16);
+
+      let y = 24;
       doc.setFontSize(10);
-      h.forEach((e,i)=>{
-        doc.text(${i+1}. ${e.date} | Tacho: ${e.tacho} km | Km: ${fmt(e.km,1)} | Litrov: ${fmt(e.liters,2)} | Spotreba: ${fmt(e.avg,2)} l/100 | Suma: ${fmt(e.sum,2)} €,14,y);
-        y+=6; if(y>280){doc.addPage();y=20;}
+
+      h.forEach((e, i) => {
+        const line = `${i + 1}. ${e.date} | Tacho: ${fmt(e.tacho,0)} km | Km: ${fmt(e.km, 1)} | ` +
+                     `Litrov: ${fmt(e.liters, 2)} | Spotreba: ${fmt(e.avg, 2)} l/100 | ` +
+                     `Suma: ${fmt(e.sum, 2)} €`;
+        doc.text(line, 14, y);
+        y += 6;
+        if (y > 280) { doc.addPage(); y = 20; }
       });
+
       doc.save("historia_tankovani.pdf");
     });
   </script>
