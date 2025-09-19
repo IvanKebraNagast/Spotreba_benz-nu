@@ -61,7 +61,7 @@
 
   <!-- Hlavné menu -->
   <div id="main">
-    <!-- Jednoduchý výpočet (bez zmeny) -->
+    <!-- Jednoduchý výpočet -->
     <div class="box">
       <h2>Jednoduchý výpočet</h2>
       <label for="km">Vzdialenosť (km)</label>
@@ -82,7 +82,7 @@
       </div>
     </div>
 
-    <!-- Denník tankovaní (tachometer + cena/l + suma) -->
+    <!-- Denník tankovaní -->
     <div class="box">
       <h2>Denník tankovaní</h2>
       <button id="addSegBtn">+ Pridať tankovanie</button>
@@ -182,17 +182,18 @@
 
       let totalKm=0,totalLiters=0,totalCost=0;
 
-      for(let i=1;i<segs.length;i++){
-        const prev=segs[i-1], cur=segs[i];
+      for(let i=0;i<segs.length;i++){
+        const cur=segs[i];
+        const prev=i>0?segs[i-1]:null;
 
-        const haveKm = cur.tacho>0 && prev.tacho>0;
+        const haveKm = i>0 && cur.tacho>0 && prev.tacho>0;
         const haveFuel = cur.price>0 && cur.sum>0;
 
-        if (haveKm) {
-          const km = cur.tacho - prev.tacho;
+        if(haveKm){
+          const km=cur.tacho - prev.tacho;
           cur.el.querySelector(".km").textContent = fmt(km,1)+" km";
 
-          if (haveFuel) {
+          if(haveFuel){
             const liters = cur.sum / cur.price;
             const avg = km>0 ? (liters/km*100) : 0;
             const perkm = km>0 ? (cur.sum/km) : 0;
@@ -202,30 +203,23 @@
             cur.el.querySelector(".perkm").textContent  = fmt(perkm,3)+" €/km";
 
             totalKm += km; totalLiters += liters; totalCost += cur.sum;
-
-            // ulož do histórie bez duplikátu
-            const saveKey = `${cur.name}|${cur.tacho}|${prev.tacho}|${cur.price}|${cur.sum}`;
-            if (cur.el.dataset.lastSaved !== saveKey) {
-              cur.el.dataset.lastSaved = saveKey;
-              saveHistory({
-                date: new Date().toLocaleString(),
-                name: cur.name || `Tankovanie ${i+1}`,
-                tacho: cur.tacho,
-                km, liters, avg,
-                sum: cur.sum
-              });
-            }
-          } else {
-            // len konečný stav km – bez paliva
-            cur.el.querySelector(".liters").textContent = "–";
-            cur.el.querySelector(".avg").textContent    = "–";
-            cur.el.querySelector(".perkm").textContent  = "–";
           }
-        } else {
+        } 
+        else if(i===0 && haveFuel){
+          // 🚀 prvé tankovanie – rátame palivo, ale km ešte nie
+          const liters = cur.sum / cur.price;
           cur.el.querySelector(".km").textContent = "–";
-          cur.el.querySelector(".liters").textContent = "–";
+          cur.el.querySelector(".liters").textContent = fmt(liters,2)+" l";
           cur.el.querySelector(".avg").textContent = "–";
           cur.el.querySelector(".perkm").textContent = "–";
+
+          totalLiters += liters; totalCost += cur.sum;
+        }
+        else {
+          cur.el.querySelector(".km").textContent="–";
+          cur.el.querySelector(".liters").textContent="–";
+          cur.el.querySelector(".avg").textContent="–";
+          cur.el.querySelector(".perkm").textContent="–";
         }
       }
 
